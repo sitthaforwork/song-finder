@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ตรวจศิลปิน — Song Finder</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="top"><div class="brand">🔎 ตรวจศิลปินใน iTunes</div><a href="/" style="color:var(--accent2)">← กลับหน้าหลัก</a></header>
+  <main>
+    <p class="muted">พิมพ์ชื่อศิลปิน (คั่นหลายชื่อด้วยเครื่องหมายจุลภาค) เพื่อดูว่า iTunes ตอบศิลปินคนไหนกลับมาบ้าง พร้อม artistId แนวเพลงที่ iTunes ติดป้าย และตัวอย่างเพลง ใช้เลือก artistId ที่ถูกต้องของวงที่ชื่อซ้ำกับวงอื่น แล้วใส่ใน server.js เช่น <code>{ artist: 'Goose', artistId: '123456789' }</code></p>
+    <form class="row" id="f">
+      <input id="q" value="Goose, Monomania, Telever" />
+      <select id="m" style="background:var(--panel);color:var(--text);border-radius:14px;border:1px solid #ffffff1f;padding:0 12px">
+        <option value="TH">ร้านไทย</option><option value="INTL">ร้านสากล (US)</option>
+      </select>
+      <button class="btn" type="submit">ตรวจ</button>
+    </form>
+    <div id="out"></div>
+  </main>
+  <script>
+    const out = document.getElementById('out');
+    function el(tag, text, cls) { const e = document.createElement(tag); if (text !== undefined) e.textContent = text; if (cls) e.className = cls; return e; }
+    document.getElementById('f').addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      out.replaceChildren(el('div', 'กำลังตรวจ…', 'loading'));
+      const names = document.getElementById('q').value.split(',').map((s) => s.trim()).filter(Boolean);
+      const market = document.getElementById('m').value;
+      const frag = document.createDocumentFragment();
+      for (const name of names) {
+        const sec = el('div', undefined, 'col'); sec.style.marginBottom = '16px';
+        sec.append(el('h3', `“${name}”`));
+        try {
+          const res = await fetch(`/api/artist-check?q=${encodeURIComponent(name)}&market=${market}`);
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || res.status);
+          if (!data.length) sec.append(el('div', 'ไม่พบศิลปินชื่อนี้ใน iTunes (อาจไม่ได้ปล่อยบน Apple Music)', 'empty'));
+          for (const g of data) {
+            const box = el('div', undefined, 'meta'); box.style.marginBottom = '10px';
+            box.append(el('b', g.artist), document.createTextNode(`  · artistId: ${g.artistId} · แนวที่ iTunes ติดป้าย: ${g.genres.join(', ')} · ${g.total} เพลง`), document.createElement('br'),
+              document.createTextNode('ตัวอย่าง: ' + g.songs.join(' | ')));
+            sec.append(box);
+          }
+        } catch (e) { sec.append(el('div', e.message, 'err')); }
+        frag.append(sec);
+      }
+      out.replaceChildren(frag);
+    });
+  </script>
+</body>
+</html>

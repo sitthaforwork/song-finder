@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="th" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Song Finder — แนะนำเพลง</title>
+  <script>
+    /* ตั้งธีมก่อนวาดหน้า ป้องกันจอวูบ: ใช้ค่าที่เคยเลือก ไม่มีก็ตามระบบ */
+    try {
+      var th = localStorage.getItem('sf-theme');
+      if (!th) th = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+      document.documentElement.dataset.theme = th;
+    } catch (e) {}
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@300;400;500;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="shell">
+
+    <!-- เมนูซ้าย -->
+    <aside class="rail">
+      <a class="logo" href="/" aria-label="Song Finder">
+        <svg viewBox="0 0 32 32" width="30" height="30" aria-hidden="true"><circle cx="16" cy="16" r="15" fill="#0a0d1a"/><circle cx="16" cy="16" r="11" fill="none" stroke="#ffffff26"/><circle cx="16" cy="16" r="5.5" fill="#ffb81f"/><circle cx="16" cy="16" r="1.6" fill="#0a0d1a"/></svg>
+        <span data-i18n="brand">Song Finder</span>
+      </a>
+      <nav class="nav" id="tabs" aria-label="main">
+        <button data-tab="hits" class="on">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20V10M12 20V4M19 20v-7"/></svg><span data-i18n="tabHits">เพลงฮิต</span>
+        </button>
+        <button data-tab="genres">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="7" cy="17" r="3"/><circle cx="17" cy="15" r="3"/><path d="M10 17V6l10-2v11"/></svg><span data-i18n="tabGenres">แนวเพลง</span>
+        </button>
+        <button data-tab="search">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg><span data-i18n="tabSearch">ค้นหา</span>
+        </button>
+        <button data-tab="ai">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 3l1.8 5.2L18 10l-5.2 1.8L11 17l-1.8-5.2L4 10l5.2-1.8z"/><path d="M19 15l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z"/></svg><span data-i18n="tabAi">AI ช่วยหาเพลง</span>
+        </button>
+        <button data-tab="about">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.01"/></svg><span data-i18n="tabAbout">เกี่ยวกับ</span>
+        </button>
+      </nav>
+      <p class="rail-note" data-i18n="railNote">ข้อมูลเพลงจาก iTunes Search API</p>
+    </aside>
+
+    <!-- พื้นที่หลัก -->
+    <div class="stage">
+      <header class="topbar">
+        <form class="topsearch" id="topSearch" role="search">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg>
+          <input id="topSearchInput" type="search" data-i18n-ph="topSearchPh" placeholder="ค้นหาเพลงหรือศิลปิน" />
+        </form>
+        <div class="tools">
+          <div class="seg" id="marketSeg" role="group" aria-label="market">
+            <button data-market="TH" class="on" data-i18n="marketTh">เพลงไทย</button>
+            <button data-market="INTL" data-i18n="marketIntl">สากล</button>
+          </div>
+          <div class="seg" id="langSeg" role="group" aria-label="language">
+            <button data-lang="th" class="on">TH</button>
+            <button data-lang="en">EN</button>
+          </div>
+          <button class="iconbtn" id="themeBtn" type="button" aria-label="theme"></button>
+        </div>
+      </header>
+
+      <main>
+        <!-- เพลงฮิต -->
+        <section id="tab-hits" class="panel">
+          <h2 class="page-title" data-i18n="hitsTitle">เพลงฮิตตอนนี้</h2>
+          <p class="lede" data-i18n="hitsLede">อันดับเพลงยอดนิยมจาก Apple Music ตามตลาดที่เลือก กดที่ปกเพื่อฟังตัวอย่าง 30 วินาที</p>
+          <div class="chart" id="hitsGrid"></div>
+        </section>
+
+        <!-- แนวเพลง -->
+        <section id="tab-genres" class="panel" hidden>
+          <h2 class="page-title" data-i18n="genresTitle">เลือกแนวเพลง</h2>
+          <div class="chips" id="genreChips"></div>
+          <div class="grid" id="genreGrid"></div>
+        </section>
+
+        <!-- ค้นหา -->
+        <section id="tab-search" class="panel" hidden>
+          <h2 class="page-title" data-i18n="searchTitle">ค้นหาเพลง / ศิลปิน</h2>
+          <form class="row" id="searchForm">
+            <input id="searchInput" type="search" data-i18n-ph="searchPh" placeholder="พิมพ์ชื่อเพลงหรือศิลปิน" />
+            <button type="button" class="btn mic" id="micSearch" data-mic="searchInput">🎤</button>
+            <select class="micLang" aria-label="speech language"><option value="th-TH">TH</option><option value="en-US">EN</option></select>
+            <button class="btn" type="submit" data-i18n="searchBtn">ค้นหา</button>
+          </form>
+          <div class="grid" id="searchGrid"></div>
+        </section>
+
+        <!-- AI -->
+        <section id="tab-ai" class="panel" hidden>
+          <h2 class="page-title" data-i18n="aiTitle">ให้ AI ช่วยหาเพลง</h2>
+          <p class="lede" data-i18n="aiDesc">พิมพ์อารมณ์ แนวเพลง เนื้อเพลงบางส่วน หรืออธิบายทำนองเป็นคำพูด</p>
+          <div id="mockBanner" class="banner" hidden data-i18n="mockBanner"></div>
+          <textarea id="aiInput" rows="3" data-i18n-ph="aiPh" placeholder="เช่น เพลงเศร้าๆ ฟังตอนฝนตก"></textarea>
+          <div class="row microw">
+            <button type="button" class="btn mic" id="micAi" data-mic="aiInput">🎤</button>
+            <select class="micLang" aria-label="speech language"><option value="th-TH">TH</option><option value="en-US">EN</option></select>
+          </div>
+          <div class="chips" id="aiExamples"></div>
+          <div class="muted small" data-i18n="aiModels">เลือกโมเดลที่จะเปรียบเทียบ:</div>
+          <div class="chips" id="modelChecks"></div>
+          <button class="btn" id="aiGo" data-i18n="aiBtn">ค้นหาด้วย AI</button>
+          <div class="compare" id="aiResults"></div>
+        </section>
+
+        <!-- เกี่ยวกับ -->
+        <section id="tab-about" class="panel" hidden>
+          <h2 class="page-title" data-i18n="aboutTitle">เกี่ยวกับโปรเจ็กต์ (DEMO)</h2>
+          <div id="aboutBody" class="about"></div>
+        </section>
+      </main>
+    </div>
+
+    <!-- แถบเล่นเพลง -->
+    <footer class="deck" id="deck">
+      <div class="deck-track">
+        <div class="disc" id="npDisc"><img id="npArt" alt="" /></div>
+        <div class="deck-text">
+          <div class="np-title" id="npTitle"></div>
+          <div class="np-artist" id="npArtist"></div>
+        </div>
+      </div>
+      <div class="deck-ctrl">
+        <button class="deck-play" id="npToggle" type="button" aria-label="play / pause">▶</button>
+        <div class="scrub" id="npTrack"><div class="scrub-fill" id="npBar"></div></div>
+        <span class="time" id="npTime">0:00 / 0:30</span>
+      </div>
+      <div class="deck-note" data-i18n="npNote">ตัวอย่าง 30 วินาที</div>
+    </footer>
+  </div>
+
+  <div id="toast" class="toast" hidden></div>
+  <script src="app.js"></script>
+</body>
+</html>
